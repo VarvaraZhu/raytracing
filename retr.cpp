@@ -6,41 +6,50 @@
 #include <vector>
 #define inf 1e10
 
-struct color {
-	unsigned int  
-};
-class colorRGB {
-public:
-	unsigned int  R;
-	unsigned G;
-	unsigned B;
+struct colour{
 
-	explicit colorRGB() {
-		R = 255;
-		B = 255;
-		G = 255;
-	}
+	  int R;
+	  int G;
+	  int B;
 
-	colorRGB(unsigned const R, unsigned const G, unsigned const B) 
-		: R(R), G(G), B(B) {};
-	
-	~colorRGB() {};
+	 colour(const int R = 0,  const int G = 0, const int B = 0) :
+		 R(R), G(G), B(B) {};
 
-	colorRGB operator *(double const k) {
-		R = (unsigned) k * R;
-		G = (unsigned) k * ;
-		B *= k;
-		if (R < 0) R = 0;
-		else if (R > 255) return 
-	}
+	 ~colour() {};
+
+	 colour &operator +(colour const &other) {
+		 R += other.R;
+		 G += other.G;
+		 B += other.B;
+
+		 if (R > 255) R = 255;
+		 if (G > 255) G = 255;
+		 if (B > 255) B = 255;
+
+		 return *this;
+	 }
+
+	colour &operator *(double const k) {
+		 R = (int)(k * R);
+		 G = (int)(k * G);
+		 B = (int)(k * B);
+
+		 if (R > 255) R = 255;
+		 if (G > 255) G = 255;
+		 if (B > 255) B = 255;
+
+		 return *this;
+	 }
+
 };
 
 class vec3 {
 
-public:
 	double x;
 	double y;
 	double z;
+
+public:
 
 	explicit vec3() {};
 
@@ -82,7 +91,6 @@ public:
 		double l = this->len();
 		return (*this * (1 / l));
 	}
-
 };
 
 class light {
@@ -143,11 +151,9 @@ public:
 	~directionalLight() {};
 };
 
-
-
 class object {
 public:
-	COLORREF color;
+	colour objColour;
 	vec3 position;
 
 	virtual bool Intersect(vec3 const &start, vec3 const &direction, double *t) { return false; };
@@ -160,9 +166,9 @@ private:
 
 public:
 
-	Sphere(const vec3 &centre, const double &radius, const COLORREF &color = RGB(0, 0, 0)) :
+	Sphere(const vec3 &centre, const double &radius, const colour &Colour = colour(0, 0, 0)) :
 		radius(radius), radius2(radius * radius) {
-		this->color = color;
+		this->objColour = Colour;
 		this->position = centre;
 	};
 
@@ -188,7 +194,7 @@ public:
 	}
 };
 
-COLORREF TraceRay(const vec3 &start, vec3 &direction, std::vector<object*> &scene, std::vector<light*> &lightning) {
+colour TraceRay(const vec3 &start, vec3 &direction, std::vector<object*> &scene, std::vector<light*> &lightning) {
 
 	double *t = new double[2];
 	t[0] = inf, t[1] = inf;
@@ -209,11 +215,10 @@ COLORREF TraceRay(const vec3 &start, vec3 &direction, std::vector<object*> &scen
 			}
 	}
 
-	if (closest_object == -1) return RGB(255, 255, 255);
+	if (closest_object == -1) return colour(255, 255, 255);
 
 	vec3 intersectPoint = direction * closest_t + start;
-	vec3 Normal;
-	Normal = intersectPoint - scene[closest_object]->position;
+	vec3 Normal = intersectPoint - scene[closest_object]->position;
 	Normal.normalize();
 
 	double totalIntensity = 0;
@@ -221,9 +226,9 @@ COLORREF TraceRay(const vec3 &start, vec3 &direction, std::vector<object*> &scen
 	for (size_t i = 0; i < lightning.size(); i++) {
 		totalIntensity += lightning[i]->computeLighting(intersectPoint, Normal);
 	}
+	colour tempcolour = scene[closest_object]->objColour * totalIntensity;
 
-	
-	return scene[closest_object]->color * totalIntensity;
+	return tempcolour;
 };
 
 void Draw_Scene(HDC hdc) {
@@ -236,16 +241,15 @@ void Draw_Scene(HDC hdc) {
 
 	std::vector<object*> scene;
 	
-	scene.push_back(&Sphere(vec3(0, imageHeight, 3 * screenDistanse), 640, RGB(255, 0, 0)));
-	scene.push_back(&Sphere(vec3(2 * imageWigth, 0, 4 * screenDistanse), 640, RGB(0, 255, 0)));
-	scene.push_back(&Sphere(vec3(- 2 * imageWigth, 0, 4 * screenDistanse), 640, RGB(0, 0, 255)));
+	scene.push_back(&Sphere(vec3(0, imageHeight, 3 * screenDistanse), 640, colour(255, 0, 0)));
+	scene.push_back(&Sphere(vec3(2 * imageWigth, 0, 4 * screenDistanse), 640, colour(0, 255, 0)));
+	scene.push_back(&Sphere(vec3(- 2 * imageWigth, 0, 4 * screenDistanse), 640, colour(0, 0, 255)));
 
 	std::vector<light*> lighting;
 
 	lighting.push_back(&ambientLight(0.2));
 	lighting.push_back(&pointLight(0.6, vec3(2 * imageWigth, 2 * imageHeight, 0)));
 	lighting.push_back(&directionalLight(0.2, vec3(imageWigth, 4 * imageHeight, 4 * screenDistanse)));
-
 
 	for (int i = 0; i < imageWigth; ++i)
 	{
@@ -255,8 +259,8 @@ void Draw_Scene(HDC hdc) {
 			double y = j - imageHeight / 2;
 			vec3 D = vec3(x, y, screenDistanse);
 			D.normalize();
-
-			SetPixel(hdc, i, j, TraceRay(O, D, scene, lighting));
+			colour tempColour = TraceRay(O, D, scene, lighting);
+			SetPixel(hdc, i, j, RGB(tempColour.R, tempColour.G, tempColour.B));
 		}
 	}
 return;
