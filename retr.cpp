@@ -108,6 +108,14 @@ public:
 		return *this;
 	}
 
+	vec3 operator -() const {
+		vec3 new_vec3 = vec3(*this);
+		new_vec3.x = -x;
+		new_vec3.y = -y;
+		new_vec3.y = -y;
+		return new_vec3;
+	}
+
 	//Бинарные арифметические операторы
 	vec3 operator -(vec3 const &other) {
 		vec3 new_vec3 = vec3(*this);
@@ -121,7 +129,7 @@ public:
 		return new_vec3;
 	}
 
-	vec3 operator *(double d) {
+	vec3 operator *(double d) const {
 		vec3 new_vec3 = vec3(*this);
 		new_vec3 *= d;
 		return new_vec3;
@@ -151,7 +159,7 @@ public:
 	//computeLighting вычисляет вклад данного источника 
 	//в освещение рассматриваемой точки
 	//(интенсивность света источника в данной точке)
-	virtual double computeLighting(vec3 const &Point, vec3 const &Normal) { return 0; };
+	virtual double computeLighting(vec3 const &Point, vec3 const &Normal, vec3 const &reviewDirection, const int specular) { return 0; };
 };
 
 //Окружающее освещение
@@ -161,7 +169,7 @@ public:
 		this->intensity = intensity;
 	}
 
-	double computeLighting(vec3 const &Point, vec3 const &Normal) { 
+	double computeLighting(vec3 const &Point, vec3 const &Normal, vec3 const &reviewDirection, const int specular) {
 		return intensity; 
 	};
 	~ambientLight() {};
@@ -177,16 +185,23 @@ public:
 		this->intensity = intensity;
 	}
 
-	double computeLighting(vec3 const &Point, vec3 const &Normal) {
+	double computeLighting(vec3 const &Point, vec3 const &Normal, vec3 const &reviewDirection, const int specular) {
 		
-		vec3 L = (position - Point).normalize(); //Направление, обратное направлению светового луча
+		double totalIntensity = 0;
 
+		vec3 L = (position - Point).normalize(); //Направление, обратное направлению светового луча
 		double cos = L * Normal; //Косинус угла между лучем света и нормалью к поверхности
 
 		if (cos > 0) //Если угол (-pi/2, pi/2) считаем интенсивность
-			return intensity * cos; 
+			totalIntensity += intensity * cos;
 
-		else return 0;
+		if (specular != -1) {
+			vec3 reflectedRay = Normal * 2 * cos - L;
+			double cos_rev = reflectedRay * reviewDirection;
+			if (cos_rev > 0)
+				totalIntensity += intensity * pow(cos_rev / reflectedRay.len() / reviewDirection.len(), specular);
+		}
+		return totalIntensity;
 	}
 	~pointLight() {};
 };
@@ -201,12 +216,20 @@ public:
 		this->intensity = intensity;
 	}
 
-	double computeLighting(vec3 const &Point, vec3 const &Normal) {
+	double computeLighting(vec3 const &Point, vec3 const &Normal, vec3 const &reviewDirection, const int specular) {
 		// Нормаль - внешняя, поэтому cos должен быть отрицательный
-		double cos =  (direction * Normal) / direction.len();
-		if (cos < 0)
-			return intensity * cos;
-		else return 0;
+		double totalIntensity = 0;
+		double cos =  -(direction * Normal) / direction.len();
+		if (cos > 0)
+			totalIntensity += intensity * cos;
+
+		if (specular != -1) {
+			vec3 reflectedRay = Normal * 2 * cos + direction;
+			double cos_rev = reflectedRay * reviewDirection;
+			if (cos_rev > 0)
+				totalIntensity += intensity * pow(cos_rev / reflectedRay.len() / reviewDirection.len(), specular);
+		}
+		return totalIntensity;
 	}
 
 	~directionalLight() {};
@@ -215,6 +238,7 @@ public:
 class object {
 public:
 	colour objColour; //Цвет объекта
+	int specular = -1;
 	vec3 position; //Центр объекта
 	//Определяет, пересекается ли данный объект с текущим лучем 
 	virtual bool Intersect(vec3 const &start, vec3 const &direction, double *t) { return false; };
@@ -227,10 +251,11 @@ private:
 
 public:
 
-	Sphere(const vec3 &centre, const double &radius, const colour &Colour = colour(0, 0, 0)) :
+	Sphere(const vec3 &centre, const double radius, const int specular, const colour &Colour = colour(0, 0, 0)) :
 		radius(radius), radius2(radius * radius) {
 		this->objColour = Colour;
 		this->position = centre;
+		this->specular = specular;
 	};
 
 	~Sphere() {};
@@ -292,8 +317,10 @@ colour TraceRay(const vec3 &start, vec3 &direction, std::vector<object*> &scene,
 	//Суммарная интенсивность от всех источников света в данной точке
 	double totalIntensity = 0;
 
+	//vec3 reviewDirection = vec3();
+	//reviewDirection = -direction;
 	for (size_t i = 0; i < lightning.size(); i++) {
-		totalIntensity += lightning[i]->computeLighting(intersectPoint, Normal);
+		totalIntensity += lightning[i]->computeLighting(intersectPoint, Normal, -direction, scene[closest_object]->specular);
 	}
 
 	return (scene[closest_object]->objColour * totalIntensity);
@@ -312,10 +339,10 @@ void Draw_Scene(HDC hdc) {
 	//Добавляем в пространство объекты
 	std::vector<object*> scene;
 	
-	scene.push_back(&Sphere(vec3(0, imageHeight, 3 * screenDistanse), 640, colour(255, 0, 0)));
-	scene.push_back(&Sphere(vec3(2 * imageWigth, 0, 4 * screenDistanse), 640, colour(0, 255, 0)));
-	scene.push_back(&Sphere(vec3(- 2 * imageWigth, 0, 4 * screenDistanse), 640, colour(0, 0, 255)));
-	scene.push_back(&Sphere(vec3(0, 5001 * imageHeight, 0), 5000 * imageHeight, colour(255, 255, 0)));
+	scene.push_back(&Sphere(vec3(0, imageHeight, 3 * screenDistanse), 640, 500, colour(255, 0, 0)));
+	scene.push_back(&Sphere(vec3(2 * imageWigth, 0, 4 * screenDistanse), 640, 500, colour(0, 255, 0)));
+	scene.push_back(&Sphere(vec3(- 2 * imageWigth, 0, 4 * screenDistanse), 640, 10, colour(0, 0, 255)));
+	scene.push_back(&Sphere(vec3(0, 5001 * imageHeight, 0), 5000 * imageHeight, 1000, colour(255, 255, 0)));
 
 	//Добавляем в пространство источники света
 	std::vector<light*> lighting;
