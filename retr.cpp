@@ -86,6 +86,7 @@ public:
 	}
 
 	//Унарные арифметические операторы
+
 	vec3 &operator -=(vec3 const &other) {
 		x -= other.x;
 		y -= other.y;
@@ -127,12 +128,12 @@ public:
 	}
 
 	//Скалярное умножение 
-	double operator *(const vec3 &other) {
+	double operator *(const vec3 &other) const {
 		return (x * other.x + y * other.y + z * other.z);
 	}
 
 	//Вычисление длины вектора
-	double len() {
+	double len() const {
 		return sqrt((*this) * (*this));
 	}
 
@@ -178,16 +179,15 @@ public:
 
 	double computeLighting(vec3 const &Point, vec3 const &Normal) {
 		
-		vec3 L = (position - Point).normalize(); //Направление светового луча
+		vec3 L = (position - Point).normalize(); //Направление, обратное направлению светового луча
 
 		double cos = L * Normal; //Косинус угла между лучем света и нормалью к поверхности
 
 		if (cos > 0) //Если угол (-pi/2, pi/2) считаем интенсивность
-			return (intensity * cos);
+			return intensity * cos; 
 
 		else return 0;
 	}
-
 	~pointLight() {};
 };
 
@@ -202,8 +202,9 @@ public:
 	}
 
 	double computeLighting(vec3 const &Point, vec3 const &Normal) {
-		double cos = direction * Normal / direction.len();
-		if (cos > 0)
+		// Нормаль - внешняя, поэтому cos должен быть отрицательный
+		double cos =  (direction * Normal) / direction.len();
+		if (cos < 0)
 			return intensity * cos;
 		else return 0;
 	}
@@ -213,9 +214,9 @@ public:
 
 class object {
 public:
-	colour objColour;
-	vec3 position;
-
+	colour objColour; //Цвет объекта
+	vec3 position; //Центр объекта
+	//Определяет, пересекается ли данный объект с текущим лучем 
 	virtual bool Intersect(vec3 const &start, vec3 const &direction, double *t) { return false; };
 };
 
@@ -236,41 +237,46 @@ public:
 
 public:
 	bool Intersect(vec3 const &start, vec3 const &direction, double *t) {
-
-		vec3 CS = position - start;
+		
+		//Решается уравнение (direction * t - position)^2 = radius2 
 		double
-			b = CS * direction,
-			c = CS * CS - radius2,
-			D = b * b - c;
+			a = direction * direction,
+			b = - (position * direction),
+			c = position * position - radius2,
+			D = b * b - c * a;
 
 		if (D < 0)
 			return FALSE;
 		
 		double d = sqrt(D);
 		
-		t[0] = -b - d;
-		t[1] = -b + d;
+		t[0] = (-b - d) / a;
+		t[1] = (-b + d) / a;
 		return TRUE;
 	}
 };
 
+//Функция, определяющая цвет пикселя 
 colour TraceRay(const vec3 &start, vec3 &direction, std::vector<object*> &scene, std::vector<light*> &lightning) {
 
-	double *t = new double[2];
+	// Ray = start + t * direction
+	double *t = new double[2]; 
+	// Значения t, соответствующие точкам пересечения луча с объектом
 	t[0] = inf, t[1] = inf;
 
-	double closest_t = inf;
-	size_t closest_object = -1;
+	size_t closest_object = -1; //Номер ближайшего объекта
+	double closest_t = inf;		//Соответствует ближайшей к экрану точке пересечения
 
+	
 	for (size_t i = 0; i < scene.size(); i++) {
 
 		if (scene[i]->Intersect(start, direction, t))
-			if (t[0] < closest_t) {
+			if (t[0] < closest_t && t[1] > 1) {
 				closest_object = i;
 				closest_t = t[0];
 			}
 
-			else if  (t[1] < closest_t) {
+			else if  (t[1] < closest_t && t[1] > 1) {
 				closest_object = i;
 				closest_t = t[1];
 			}
@@ -278,10 +284,12 @@ colour TraceRay(const vec3 &start, vec3 &direction, std::vector<object*> &scene,
 
 	if (closest_object == -1) return colour(255, 255, 255);
 
-	vec3 intersectPoint = direction * closest_t + start;
-	vec3 Normal = intersectPoint - scene[closest_object]->position;
-	Normal.normalize();
+	//Вычислем координаты точки пересечения
+	vec3 intersectPoint = ((direction * closest_t) + start);
+	//Строим ВНЕШНЮЮ нормаль к сфере
+	vec3 Normal = (intersectPoint - scene[closest_object]->position).normalize();
 
+	//Суммарная интенсивность от всех источников света в данной точке
 	double totalIntensity = 0;
 
 	for (size_t i = 0; i < lightning.size(); i++) {
@@ -293,32 +301,39 @@ colour TraceRay(const vec3 &start, vec3 &direction, std::vector<object*> &scene,
 
 void Draw_Scene(HDC hdc) {
 	
+	//Размеры окна, расстояние от начала координат до плоскости экрана
 	int imageWigth = 640,
 		imageHeight = 640,
 		screenDistanse = 640;
 
+	//Задаем начало координат
 	vec3 O = vec3(0, 0, 0);
 
+	//Добавляем в пространство объекты
 	std::vector<object*> scene;
 	
 	scene.push_back(&Sphere(vec3(0, imageHeight, 3 * screenDistanse), 640, colour(255, 0, 0)));
 	scene.push_back(&Sphere(vec3(2 * imageWigth, 0, 4 * screenDistanse), 640, colour(0, 255, 0)));
 	scene.push_back(&Sphere(vec3(- 2 * imageWigth, 0, 4 * screenDistanse), 640, colour(0, 0, 255)));
+	scene.push_back(&Sphere(vec3(0, 5001 * imageHeight, 0), 5000 * imageHeight, colour(255, 255, 0)));
 
+	//Добавляем в пространство источники света
 	std::vector<light*> lighting;
 
 	lighting.push_back(&ambientLight(0.2));
-	lighting.push_back(&pointLight(0.6, vec3(2 * imageWigth, imageHeight, 0)));
-	lighting.push_back(&directionalLight(0.2, vec3(imageWigth, 4 * imageHeight, 4 * screenDistanse)));
+	lighting.push_back(&pointLight(0.6, vec3(2 * imageWigth,  - imageHeight, 0)));
+	lighting.push_back(&directionalLight(0.2, vec3(imageWigth, - 4 * imageHeight, 4 * screenDistanse)));
 
 	for (int i = 0; i < imageWigth; ++i)
 	{
 		for (int j = 0; j < imageHeight; ++j)
 		{
-			double x = i - imageWigth / 2;
+			//Переход из СК экрана в координатное пространство
+			double x = i - imageWigth / 2; 
 			double y = j - imageHeight / 2;
-			vec3 D = vec3(x, y, screenDistanse);
-			D.normalize();
+			//vec3 D = vec3(x, y, screenDistanse).normalize(); //Луч из точки наблюдения в пиксель
+			vec3 D = vec3(x, y, screenDistanse); //Луч из точки наблюдения в пиксель
+
 			colour tempColour = TraceRay(O, D, scene, lighting);
 			SetPixel(hdc, i, j, RGB(tempColour.R, tempColour.G, tempColour.B));
 		}
