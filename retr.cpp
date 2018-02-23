@@ -1,12 +1,14 @@
 #pragma once
-#include "stdafx.h"
 
-#include <windows.h>
+#include <X11/Xlib.h>
+#include <X11/Xutil.h>
+#include <X11/Xos.h>
+
+
 #include <math.h>
 #include <vector>
 #define inf 1e10
 
-//Цвет объекта
 struct colour{
 
 	 int R;
@@ -42,7 +44,7 @@ struct colour{
 		 return *this;
 	 }
 
-	 colour operator *(double k) {
+	 colour operator *(double k) const {
 
 		 colour new_colour = colour();
 		 new_colour.R = (int)(R * k);
@@ -53,7 +55,6 @@ struct colour{
 	 }
 };
 
-// вектор / точка в трехмерном пространстве
 class vec3 {
 
 	double x;
@@ -64,18 +65,16 @@ public:
 
 	explicit vec3() {};
 
-	//Конструктор
 	vec3(const double x, const double y, const double z) :
 		x(x), y(y), z(z) {};
 
-	//Коструктор копирования
 	vec3(vec3 const &other){
 		x = other.x;
 		y = other.y;
 		z = other.z;
 	};
 
-	//Деструктор
+	//пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
 	~vec3() {};
 	
 	vec3 &operator =(vec3 const &other) {
@@ -85,7 +84,7 @@ public:
 		return *this;
 	}
 
-	//Унарные арифметические операторы
+	//пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
 	vec3 &operator -=(vec3 const &other) {
 		x -= other.x;
 		y -= other.y;
@@ -107,7 +106,7 @@ public:
 		return *this;
 	}
 
-	//Бинарные арифметические операторы
+	//пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
 	vec3 operator -(vec3 const &other) {
 		vec3 new_vec3 = vec3(*this);
 		new_vec3 -= other;
@@ -126,34 +125,34 @@ public:
 		return new_vec3;
 	}
 
-	//Скалярное умножение 
+	//пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ 
 	double operator *(const vec3 &other) {
 		return (x * other.x + y * other.y + z * other.z);
 	}
 
-	//Вычисление длины вектора
+	//пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ
 	double len() {
 		return sqrt((*this) * (*this));
 	}
 
-	//Нормировка вектора
+	//пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ
 	vec3 normalize() {
 		(*this) *= (1 / this->len());
 		return *this;
 	}
 };
 
-//Источники света
+//пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ
 class light {
 public:
 	double intensity = 0;
-	//computeLighting вычисляет вклад данного источника 
-	//в освещение рассматриваемой точки
-	//(интенсивность света источника в данной точке)
+	//computeLighting пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ 
+	//пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ
+	//(пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ)
 	virtual double computeLighting(vec3 const &Point, vec3 const &Normal) { return 0; };
 };
 
-//Окружающее освещение
+//пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
 class ambientLight : public light {
 public:
 	ambientLight(const double &intensity) {
@@ -166,7 +165,7 @@ public:
 	~ambientLight() {};
 };
 
-//Точечный источник
+//пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
 class pointLight : public light{	
 	
 	vec3 position; 
@@ -178,11 +177,11 @@ public:
 
 	double computeLighting(vec3 const &Point, vec3 const &Normal) {
 		
-		vec3 L = (position - Point).normalize(); //Направление светового луча
+		vec3 L = (position - Point).normalize(); //пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ
 
-		double cos = L * Normal; //Косинус угла между лучем света и нормалью к поверхности
+		double cos = L * Normal; //пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
 
-		if (cos > 0) //Если угол (-pi/2, pi/2) считаем интенсивность
+		if (cos > 0) //пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ (-pi/2, pi/2) пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
 			return (intensity * cos);
 
 		else return 0;
@@ -191,7 +190,7 @@ public:
 	~pointLight() {};
 };
 
-//Направленный источник
+//пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
 class directionalLight : public light {
 
 	vec3 direction;
@@ -244,13 +243,13 @@ public:
 			D = b * b - c;
 
 		if (D < 0)
-			return FALSE;
+			return 0;
 		
 		double d = sqrt(D);
 		
 		t[0] = -b - d;
 		t[1] = -b + d;
-		return TRUE;
+		return 1;
 	}
 };
 
@@ -291,7 +290,7 @@ colour TraceRay(const vec3 &start, vec3 &direction, std::vector<object*> &scene,
 	return (scene[closest_object]->objColour * totalIntensity);
 };
 
-void Draw_Scene(HDC hdc) {
+void Draw_Scene(Display *dis, Window win, GC gc) {
 	
 	int imageWigth = 640,
 		imageHeight = 640,
@@ -320,7 +319,9 @@ void Draw_Scene(HDC hdc) {
 			vec3 D = vec3(x, y, screenDistanse);
 			D.normalize();
 			colour tempColour = TraceRay(O, D, scene, lighting);
-			SetPixel(hdc, i, j, RGB(tempColour.R, tempColour.G, tempColour.B));
+			XSetForeground(dis, gc, black);
+			XDrawPoint(dis, win, gc, i, j);
+			//SetPixel(hdc, i, j, RGB(tempColour.R, tempColour.G, tempColour.B));
 		}
 	}
 return;

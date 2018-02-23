@@ -1,5 +1,3 @@
 #pragma once
-#include <windows.h>
-#include "stdafx.h"
 
-void Draw_Scene(HDC hdc);
+void Draw_Scene(Display *dis, Window win, GC gc);
