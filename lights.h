@@ -5,10 +5,22 @@
 class Light {
 public:
 	double intensity = 0;
+	Colour colour = Colour(255, 255, 255);
 	//computeLighting вычисляет вклад данного источника 
 	//в освещение рассматриваемой точки
 	//(интенсивность света источника в данной точке)
-	virtual double computeLighting(Vec3 const &point, Vec3 const &normal) { return 0; };
+	virtual double computeLighting(Vec3 const &point, Vec3 const &normal) {
+		double total_intensity = 0;
+		Vec3 L = -this->getDirection(point).normalize();; //Направление, обратное направлению светового луча
+		double cos = L * normal; //Косинус угла между лучем света и нормалью к поверхности
+
+		if (cos > 0) //Если угол (-pi/2, pi/2) считаем интенсивность
+			total_intensity += intensity * cos;
+
+		return total_intensity;
+	}
+
+	virtual Vec3 getDirection(Vec3 const &point) const { return Vec3(0, 0, 0); }
 };
 
 //Окружающее освещение
@@ -34,7 +46,12 @@ public:
 		this->intensity = intensity;
 	}
 
-	double computeLighting(Vec3 const &point, Vec3 const &normal);
+	//double computeLighting(Vec3 const &point, Vec3 const &normal);
+
+	Vec3 getDirection(Vec3 const &point) const {
+		return (point - position);
+	}
+
 	~Point_Light() {};
 };
 
@@ -48,6 +65,11 @@ public:
 		this->intensity = intensity;
 	}
 
-	double computeLighting(Vec3 const &point, Vec3 const &normal);
+	//double computeLighting(Vec3 const &point, Vec3 const &normal);
+
+	Vec3 getDirection(Vec3 const &point) const {
+		return direction;
+	}
+
 	~Directional_Light() {};
 };

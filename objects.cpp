@@ -3,8 +3,33 @@
 #include "objects.h"
 #include "texture.h"
 
+Colour Object::reflectedColour(Vec3 const &direction, Vec3 const &point, Light const *light) const {
+	Vec3 L = -light->getDirection(point);
+	Vec3 V = -direction;
+	Vec3 N = this->buildNormal(point);
+	Vec3 R = N * 2 * (N * L) - L;
+	R.normalize(), V.normalize();
+	double cos = R * V;
+	if (cos > 0)
+		return ((*light).colour - object_colour) * pow(cos, specular) * (*light).intensity;
 
-bool Sphere::intersect(Vec3 const &start, Vec3 const &direction, double *t) {
+	else return (Colour(0, 0, 0));
+}
+/*
+double Object::reflectedColour(Vec3 const &direction, Vec3 const &point, Light const *light) {
+	Vec3 L = -light->getDirection(point);
+	Vec3 V = -direction;
+	Vec3 N = this->buildNormal(point);
+	Vec3 R = N * 2 * (N * L) - L;
+	R.normalize(), V.normalize();
+	double cos = R * V;
+	if (cos > 0)
+		return pow(cos, specular) * (*light).intensity;
+
+	else return 0;
+}
+*/
+bool Sphere::intersect(Vec3 const &start, Vec3 const &direction, double &t0, double &t1) const {
 
 	//Решается уравнение (direction * t - position)^2 = radius2 
 	double
@@ -18,12 +43,10 @@ bool Sphere::intersect(Vec3 const &start, Vec3 const &direction, double *t) {
 
 	double d = sqrt(D);
 
-	t[0] = (-b - d) / a;
-	t[1] = (-b + d) / a;
+	t0 = (-b - d) / a;
+	t1 = (-b + d) / a;
 
 	return TRUE;
 }
-
-
 
 

@@ -42,13 +42,13 @@ Vec3& Vec3::operator -() const {
 	}
 
 	//Бинарные арифметические операторы
-Vec3 Vec3::operator -(Vec3 const &other) {
+Vec3 Vec3::operator -(Vec3 const &other) const {
 		Vec3 new_vec3 = Vec3(*this);
 		new_vec3 -= other;
 		return new_vec3;
 	}
 
-Vec3 Vec3::operator +(Vec3 const &other) {
+Vec3 Vec3::operator +(Vec3 const &other) const {
 		Vec3 new_vec3 = Vec3(*this);
 		new_vec3 += other;
 		return new_vec3;

@@ -19,5 +19,7 @@ struct Colour{
 
 	 Colour &operator +=(Colour const &other);
 	 Colour &operator *=(double const k);
-	 Colour operator *(double k);
+	 Colour operator *(double k) const;
+	 Colour operator +(Colour const &other) const;
+	 Colour operator -(Colour const &other) const;
 };

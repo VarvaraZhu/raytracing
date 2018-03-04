@@ -28,8 +28,8 @@ public:
 	Vec3 &operator *=(double d);
 	Vec3 &operator -() const;
 
-	Vec3 operator -(Vec3 const &other);
-	Vec3 operator +(Vec3 const &other);
+	Vec3 operator -(Vec3 const &other)const;
+	Vec3 operator +(Vec3 const &other)const;
 	Vec3 operator *(double d) const;
 	double operator *(const Vec3 &other) const;
 
